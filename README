@@ -1,0 +1,159 @@
+NAME
+    Linux::Inotify2 - scalable directory/file change notification
+
+SYNOPSIS
+     use Linux::Inotify2;
+
+DESCRIPTION
+  The Linux::Inotify2 Class
+    This module implements an interface to the linux inotify file/directory
+    change notification sytem.
+
+    It has a number of advantages over the Linux::Inotfy module:
+
+       - it is portable (Linux::Inotify only works on x86)
+       - the equivalent of fullname works correctly
+       - it is better documented
+       - it has callback-style interface, which is better suited for
+         integration.
+
+    my $inotify = new Linux::Inotify2
+        Create a new notify object and return it. A notify object is kind of
+        a container that stores watches on filesystem names and is
+        responsible for handling event data.
+
+        On error, "undef" is returned and $! will be set accordingly. The
+        followign errors are documented:
+
+         ENFILE   The system limit on the total number of file descriptors has been reached.
+         EMFILE   The user limit on the total number of inotify instances has been reached.
+         ENOMEM   Insufficient kernel memory is available.
+
+    $watch = $inotify2->watch ($name, $mask, $cb)
+        Add a new watcher to the given notifier. The watcher will create
+        events on the pathname $name as given in $mask, which can be any of
+        the following constants (all exported by default) ORed together:
+
+         IN_ACCESS            File was accessed
+         IN_MODIFY            File was modified
+         IN_ATTRIB            Metadata changed
+         IN_CLOSE_WRITE       Writtable file was closed
+         IN_CLOSE_NOWRITE     Unwrittable file closed
+         IN_OPEN              File was opened
+         IN_MOVED_FROM        File was moved from X
+         IN_MOVED_TO          File was moved to Y
+         IN_CREATE            Subfile was created
+         IN_DELETE            Subfile was deleted
+         IN_DELETE_SELF       Self was deleted
+         IN_ONESHOT           only send event once
+         IN_ALL_EVENTS        All of the above events
+
+         IN_CLOSE             Same as IN_CLOSE_WRITE | IN_CLOSE_NOWRITE
+         IN_MOVE              Same as IN_MOVED_FROM | IN_MOVED_TO
+
+        $cb is a perl code reference that is called for each event. It
+        receives a "Linux::Inotify2::Event" object.
+
+        The returned $watch object is of class "Linux::Inotify2::Watch".
+
+        On error, "undef" is returned and $! will be set accordingly. The
+        following errors are documented:
+
+         EBADF    The given file descriptor is not valid.
+         EINVAL   The given event mask contains no legal events.
+         ENOMEM   Insufficient kernel memory was available.
+         ENOSPC   The user limit on the total number of inotify watches was reached or the kernel failed to allocate a needed resource.
+         EACCESS  Read access to the given file is not permitted.
+
+        Example, show when "/etc/passwd" gets accessed and/or modified once:
+
+           $inotify->watch ("/etc/passwd", IN_ACCESS | IN_MODIFY, sub {
+              my $e = shift;
+              print "$e->{w}{name} was accessed\n" if $e->IN_ACCESS;
+              print "$e->{w}{name} was modified\n" if $e->IN_MODIFY;
+              print "$e->{w}{name} is no longer mounted\n" if $e->IN_UNMOUNT;
+              print "events for $e->{w}{name} have been lost\n" if $e->IN_Q_OVERFLOW;
+
+              $e->w->cancel;
+           });
+
+    $inotify2->fileno
+        Returns the fileno for this notify object. You are responsible for
+        calling the "poll" method when this fileno becomes ready for
+        reading.
+
+    $count = $inotify2->poll
+        Reads events from the kernel and handles them. If the notify fileno
+        is blocking (the default), then this method waits for at least one
+        event. Otherwise it returns immediately when no pending events could
+        be read.
+
+        Returns the count of events that have been handled.
+
+  The Linux::Inotify2::Event Class
+    Objects of this class are handed as first argument to the watch
+    callback. It has the following members and methods:
+
+    $event->w
+    $event->{w}
+        The watcher object for this event.
+
+    $event->name
+    $event->{name}
+        The path of the filesystem object, relative to the watch name.
+
+    $watch->fullname
+        Returns the "full" name of the relevant object, i.e. including the
+        "name" component of the watcher.
+
+    $event->mask
+    $event->{mask}
+        The received event mask. In addition the the events described for
+        "$inotify-"watch>, the following flags (exported by default) can be
+        set:
+
+         IN_ISDIR             event occurred against dir
+
+         IN_UNMOUNT           Backing fs was unmounted
+         IN_Q_OVERFLOW        Event queued overflowed
+         IN_IGNORED           File was ignored (no more events will be delivered)
+
+    $event->IN_xxx
+        Returns a boolean that returns true if the event mask matches the
+        event. All of the "IN_xxx" constants can be used as methods.
+
+    $event->cookie
+    $event->{cookie}
+        The event cookie, can be used to synchronize two related events.
+
+  The Linux::Inotify2::Watch Class
+    Watch objects are created by calling the "watch" method of a notifier.
+
+    It has the following members and methods:
+
+    $watch->name
+    $watch->{name}
+    The name as specified in the "watch" call. For the object itself, this
+    is the empty string. For directory watches, this is the name of the
+    entry without leading path elements.
+
+    $watch->mask
+    $watch->{mask}
+    The mask as specified in the "watch" call.
+
+    $watch->cb ([new callback])
+    $watch->{cb}
+    The callback as specified in the "watch" call. Can optionally be
+    changed.
+
+    $watch->cancel
+    Cancels/removes this watch. Future events, even if already queued
+    queued, will not be handled and resources will be freed.
+
+SEE ALSO
+    Linux::Inotify.
+
+AUTHOR
+     Marc Lehmann <schmorp@schmorp.de>
+     http://home.schmorp.de/
+
