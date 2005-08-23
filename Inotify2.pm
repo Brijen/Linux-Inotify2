@@ -6,14 +6,38 @@ Linux::Inotify2 - scalable directory/file change notification
 
  use Linux::Inotify2;
 
+ # create a new object
+ my $inotify = new Linux::Inotify2
+    or die "Unable to create new inotify object: $!";
+ 
+ # for Event:
+ Event->io (fd =>$inotify->fileno, poll => 'r', cb => sub { $inotify->poll });
+ # for Glib:
+ add_watch Glib::IO $inotify->fileno, in => sub { $inotify->poll };
+ # manually:
+ 1 while $inotify->poll;
+
+ # add watchers
+ $inotify->watch ("/etc/passwd", IN_ACCESS, sub {
+    my $e = shift;
+    my $name = $e->fullname;
+    print "$name was accessed\n" if $e->IN_ACCESS;
+    print "$name is no longer mounted\n" if $e->IN_UNMOUNT;
+    print "$name is gone\n" if $e->IN_IGNORED;
+    print "events for $name have been lost\n" if $e->IN_Q_OVERFLOW;
+ 
+    # cancel this watcheR: remove no further events
+    $e->w->cancel;
+ });
+
 =head1 DESCRIPTION
 
 =head2 The Linux::Inotify2 Class
 
-This module implements an interface to the linux inotify file/directory
-change notification sytem.
+This module implements an interface to the Linux 2.6.13 and later Inotify
+file/directory change notification sytem.
 
-It has a number of advantages over the Linux::Inotfy module:
+It has a number of advantages over the Linux::Inotify module:
 
    - it is portable (Linux::Inotify only works on x86)
    - the equivalent of fullname works correctly
@@ -33,7 +57,7 @@ use Scalar::Util ();
 use base 'Exporter';
 
 BEGIN {
-   $VERSION = 0.1;
+   $VERSION = 0.2;
 
    @constants = qw(
       IN_ACCESS IN_MODIFY IN_ATTRIB IN_CLOSE_WRITE
@@ -64,6 +88,11 @@ are documented:
  EMFILE   The user limit on the total number of inotify instances has been reached.
  ENOMEM   Insufficient kernel memory is available.
 
+Example:
+
+   my $inotify = new Linux::Inotify2
+      or die "Unable to create new inotify object: $!";
+
 =cut
 
 sub new {
@@ -76,28 +105,33 @@ sub new {
    bless { fd => $fd }, $class
 }
 
-=item $watch = $inotify2->watch ($name, $mask, $cb)
+=item $watch = $inotify->watch ($name, $mask, $cb)
 
 Add a new watcher to the given notifier. The watcher will create events
 on the pathname C<$name> as given in C<$mask>, which can be any of the
-following constants (all exported by default) ORed together:
+following constants (all exported by default) ORed together.
 
- IN_ACCESS            File was accessed
- IN_MODIFY            File was modified
- IN_ATTRIB            Metadata changed
- IN_CLOSE_WRITE       Writtable file was closed
- IN_CLOSE_NOWRITE     Unwrittable file closed
- IN_OPEN              File was opened
- IN_MOVED_FROM        File was moved from X
- IN_MOVED_TO          File was moved to Y
- IN_CREATE            Subfile was created
- IN_DELETE            Subfile was deleted
- IN_DELETE_SELF       Self was deleted
+"file" refers to any filesystem object in the watch'ed object (always a
+directory), that is files, directories, symlinks, device nodes etc., while
+"object" refers to the object the watch has been set on itself:
+
+ IN_ACCESS            object was accessed
+ IN_MODIFY            object was modified
+ IN_ATTRIB            object metadata changed
+ IN_CLOSE_WRITE       writable fd to file / to object was closed
+ IN_CLOSE_NOWRITE     readonly fd to file / to object closed
+ IN_OPEN              object was opened
+ IN_MOVED_FROM        file was moved from this object (directory)
+ IN_MOVED_TO          file was moved to this object (directory)
+ IN_CREATE            file was created in this object (directory)
+ IN_DELETE            file was deleted from this object (directory)
+ IN_DELETE_SELF       object itself was deleted
+ IN_ALL_EVENTS        all of the above events
+
  IN_ONESHOT           only send event once
- IN_ALL_EVENTS        All of the above events
 
- IN_CLOSE             Same as IN_CLOSE_WRITE | IN_CLOSE_NOWRITE
- IN_MOVE              Same as IN_MOVED_FROM | IN_MOVED_TO
+ IN_CLOSE             same as IN_CLOSE_WRITE | IN_CLOSE_NOWRITE
+ IN_MOVE              same as IN_MOVED_FROM | IN_MOVED_TO
 
 C<$cb> is a perl code reference that is called for each event. It receives
 a C<Linux::Inotify2::Event> object.
@@ -147,7 +181,7 @@ sub watch {
    $w
 }
 
-=item $inotify2->fileno
+=item $inotify->fileno
 
 Returns the fileno for this notify object. You are responsible for calling
 the C<poll> method when this fileno becomes ready for reading.
@@ -158,27 +192,37 @@ sub fileno {
    $_[0]{fd}
 }
 
-=item $count = $inotify2->poll
+=item $count = $inotify->poll
 
-Reads events from the kernel and handles them. If the notify fileno
-is blocking (the default), then this method waits for at least one
-event. Otherwise it returns immediately when no pending events could be
-read.
+Reads events from the kernel and handles them. If the notify fileno is
+blocking (the default), then this method waits for at least one event
+(and thus returns true unless an error occurs). Otherwise it returns
+immediately when no pending events could be read.
 
 Returns the count of events that have been handled.
 
 =cut
 
-# TODO: potential race with recently-canceled watchers
-
 sub poll {
    my ($self) = @_;
 
-   for (inotify_read $self->{fd}) {
-      $_->{w} = $self->{w}{$_->{wd}}
+   my @ev = inotify_read $self->{fd};
+
+   for (@ev) {
+      my $w = $_->{w} = $self->{w}{$_->{wd}}
          or next; # no such watcher
-      $_->{w}{cb}->(bless $_, Linux::Inotify2::Event);
+
+      exists $self->{ignore}{$_->{wd}}
+         and next; # watcher has been canceled
+
+      $w->{cb}->(bless $_, Linux::Inotify2::Event);
+      # TODO: what about IN_ONESHOT?
+      $w->cancel if $_->{mask} & (IN_IGNORED | IN_UNMOUNT);
    }
+
+   delete $self->{ignore};
+
+   scalar @ev
 }
 
 sub DESTROY {
@@ -218,11 +262,13 @@ component of the watcher.
 The received event mask. In addition the the events described for
 C<$inotify->watch>, the following flags (exported by default) can be set:
 
- IN_ISDIR             event occurred against dir
+ IN_ISDIR             event object is a directory
 
- IN_UNMOUNT           Backing fs was unmounted
- IN_Q_OVERFLOW        Event queued overflowed
- IN_IGNORED           File was ignored (no more events will be delivered)
+ IN_Q_OVERFLOW        event queue overflowed
+
+ # when the following flags are set, then watchers are canceled automatically
+ IN_UNMOUNT           filesystem for watch'ed object was unmounted
+ IN_IGNORED           file was ignored/is gone (no more events are delivered)
 
 =item $event->IN_xxx
 
@@ -304,7 +350,13 @@ sub cb {
 sub cancel {
    my ($self) = @_;
 
-   (Linux::Inotify2::inotify_rm_watch $self->{inotify}{fd}, $self->{wd})
+   my $inotify = delete $self->{inotify}
+      or return 1; # already canceled
+
+   delete $inotify->{w}{$self->{wd}}; # we are no longer there
+   $inotify->{ignore}{$self->{wd}} = 1; # ignore further events for one poll
+
+   (Linux::Inotify2::inotify_rm_watch $inotify->{fd}, $self->{wd})
       ? 1 : undef
 }
 

@@ -1,4 +1,13 @@
 Revision history for Linux::Inotify2
 
-0.1
+0.2
+	- poll now really returns the #events.
+        - handle multiple cancel's gracefully.
+        - auto-cancel watchers on IN_IGNORED and IN_UNMOUNT.
+          situation with IN_ONESHOT is unclear
+          (does have no effect on 2.6.13-rc6-git13).
+        - avoid race between canceled and newly-created watches.
+        - improved documentation.
+
+0.1  Mon Aug 22 12:05:15 CEST 2005
 	- original version, a Linux::AIO clone.
