@@ -32,8 +32,6 @@ Linux::Inotify2 - scalable directory/file change notification
 
 =head1 DESCRIPTION
 
-=head2 The Linux::Inotify2 Class
-
 This module implements an interface to the Linux 2.6.13 and later Inotify
 file/directory change notification sytem.
 
@@ -44,6 +42,8 @@ It has a number of advantages over the Linux::Inotify module:
    - it is better documented
    - it has callback-style interface, which is better suited for
      integration.
+
+=head2 The Linux::Inotify2 Class
 
 =over 4
 
@@ -57,12 +57,12 @@ use Scalar::Util ();
 use base 'Exporter';
 
 BEGIN {
-   $VERSION = 0.2;
+   $VERSION = 0.8;
 
    @constants = qw(
       IN_ACCESS IN_MODIFY IN_ATTRIB IN_CLOSE_WRITE
       IN_CLOSE_NOWRITE IN_OPEN IN_MOVED_FROM IN_MOVED_TO
-      IN_CREATE IN_DELETE IN_DELETE_SELF
+      IN_CREATE IN_DELETE IN_DELETE_SELF IN_MOVE_SELF
       IN_ALL_EVENTS
       IN_UNMOUNT IN_Q_OVERFLOW IN_IGNORED
       IN_CLOSE IN_MOVE
@@ -126,6 +126,7 @@ directory), that is files, directories, symlinks, device nodes etc., while
  IN_CREATE            file was created in this object (directory)
  IN_DELETE            file was deleted from this object (directory)
  IN_DELETE_SELF       object itself was deleted
+ IN_MOVE_SELF         object itself was moved
  IN_ALL_EVENTS        all of the above events
 
  IN_ONESHOT           only send event once
@@ -216,8 +217,7 @@ sub poll {
          and next; # watcher has been canceled
 
       $w->{cb}->(bless $_, Linux::Inotify2::Event);
-      # TODO: what about IN_ONESHOT?
-      $w->cancel if $_->{mask} & (IN_IGNORED | IN_UNMOUNT);
+      $w->cancel if $_->{mask} & (IN_IGNORED | IN_UNMOUNT | IN_ONESHOT);
    }
 
    delete $self->{ignore};
@@ -253,7 +253,9 @@ The path of the filesystem object, relative to the watch name.
 =item $watch->fullname
 
 Returns the "full" name of the relevant object, i.e. including the C<name>
-component of the watcher.
+member of the watcher (if the the watch is on a directory and a dir entry
+is affected), or simply the C<name> member itself when the object is the
+watch object itself.
 
 =item $event->mask
 
@@ -263,12 +265,13 @@ The received event mask. In addition the the events described for
 C<$inotify->watch>, the following flags (exported by default) can be set:
 
  IN_ISDIR             event object is a directory
-
  IN_Q_OVERFLOW        event queue overflowed
 
- # when the following flags are set, then watchers are canceled automatically
+ # when any of the following flags are set,
+ # then watchers for this event are automatically canceled
  IN_UNMOUNT           filesystem for watch'ed object was unmounted
  IN_IGNORED           file was ignored/is gone (no more events are delivered)
+ IN_ONESHOT           only one event was generated
 
 =item $event->IN_xxx
 
@@ -279,7 +282,10 @@ event. All of the C<IN_xxx> constants can be used as methods.
 
 =item $event->{cookie}
 
-The event cookie, can be used to synchronize two related events.
+The event cookie to "synchronize two events". Normally zero, this value is
+set when two events relating to the same file are generated. As far as I
+know, this only happens for C<IN_MOVED_FROM> and C<IN_MOVED_TO> events, to
+identify the old and new name of a file.
 
 =back
 

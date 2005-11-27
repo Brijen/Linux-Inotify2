@@ -1,6 +1,6 @@
 #!/opt/bin/perl
 
-#r
+# very simple example without further modules
 
 use Linux::Inotify2;
 

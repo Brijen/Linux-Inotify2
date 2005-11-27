@@ -1,6 +1,12 @@
 Revision history for Linux::Inotify2
 
-0.2
+0.8  Sun Nov 27 13:43:14 CET 2005
+	- improved documentation.
+        - added IN_MOVE_SELF.
+        - cancel events when receiving an IN_ONESHOT event.
+        - clarify documentation for ->cookie.
+
+0.2  Tue Aug 23 04:27:31 CEST 2005
 	- poll now really returns the #events.
         - handle multiple cancel's gracefully.
         - auto-cancel watchers on IN_IGNORED and IN_UNMOUNT.

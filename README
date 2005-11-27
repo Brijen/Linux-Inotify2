@@ -29,7 +29,6 @@ SYNOPSIS
      });
 
 DESCRIPTION
-  The Linux::Inotify2 Class
     This module implements an interface to the Linux 2.6.13 and later
     Inotify file/directory change notification sytem.
 
@@ -41,6 +40,7 @@ DESCRIPTION
        - it has callback-style interface, which is better suited for
          integration.
 
+  The Linux::Inotify2 Class
     my $inotify = new Linux::Inotify2
         Create a new notify object and return it. A notify object is kind of
         a container that stores watches on filesystem names and is
@@ -79,6 +79,7 @@ DESCRIPTION
          IN_CREATE            file was created in this object (directory)
          IN_DELETE            file was deleted from this object (directory)
          IN_DELETE_SELF       object itself was deleted
+         IN_MOVE_SELF         object itself was moved
          IN_ALL_EVENTS        all of the above events
 
          IN_ONESHOT           only send event once
@@ -139,7 +140,9 @@ DESCRIPTION
 
     $watch->fullname
         Returns the "full" name of the relevant object, i.e. including the
-        "name" component of the watcher.
+        "name" member of the watcher (if the the watch is on a directory and
+        a dir entry is affected), or simply the "name" member itself when
+        the object is the watch object itself.
 
     $event->mask
     $event->{mask}
@@ -148,12 +151,13 @@ DESCRIPTION
         set:
 
          IN_ISDIR             event object is a directory
-
          IN_Q_OVERFLOW        event queue overflowed
 
-         # when the following flags are set, then watchers are canceled automatically
+         # when any of the following flags are set,
+         # then watchers for this event are automatically canceled
          IN_UNMOUNT           filesystem for watch'ed object was unmounted
          IN_IGNORED           file was ignored/is gone (no more events are delivered)
+         IN_ONESHOT           only one event was generated
 
     $event->IN_xxx
         Returns a boolean that returns true if the event mask matches the
@@ -161,7 +165,11 @@ DESCRIPTION
 
     $event->cookie
     $event->{cookie}
-        The event cookie, can be used to synchronize two related events.
+        The event cookie to "synchronize two events". Normally zero, this
+        value is set when two events relating to the same file are
+        generated. As far as I know, this only happens for "IN_MOVED_FROM"
+        and "IN_MOVED_TO" events, to identify the old and new name of a
+        file.
 
   The Linux::Inotify2::Watch Class
     Watch objects are created by calling the "watch" method of a notifier.

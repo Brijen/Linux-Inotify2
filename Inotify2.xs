@@ -28,6 +28,7 @@ BOOT:
         newCONSTSUB (stash, "IN_CREATE"       , newSViv (IN_CREATE));
         newCONSTSUB (stash, "IN_DELETE"       , newSViv (IN_DELETE));
         newCONSTSUB (stash, "IN_DELETE_SELF"  , newSViv (IN_DELETE_SELF));
+        newCONSTSUB (stash, "IN_MOVE_SELF"    , newSViv (IN_MOVE_SELF));
         newCONSTSUB (stash, "IN_UNMOUNT"      , newSViv (IN_UNMOUNT));
         newCONSTSUB (stash, "IN_Q_OVERFLOW"   , newSViv (IN_Q_OVERFLOW));
         newCONSTSUB (stash, "IN_IGNORED"      , newSViv (IN_IGNORED));

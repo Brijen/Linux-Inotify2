@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Linux-Inotify2
-version:      0.2
+version:      0.8
 version_from: Inotify2.pm
 installdirs:  site
 requires:
