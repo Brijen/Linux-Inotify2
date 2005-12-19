@@ -1,5 +1,12 @@
 Revision history for Linux::Inotify2
 
+1.0  Mon Dec 19 17:48:01 CET 2005                                                                                                 
+	- incorporated a major patch by Andrejs Dubovskis:
+        - added a non-callback interface to read events
+        - better error handling in non-blocking case.
+        - added test case.
+        - fix reading events leaking memory.
+
 0.8  Sun Nov 27 13:43:14 CET 2005
 	- improved documentation.
         - added IN_MOVE_SELF.

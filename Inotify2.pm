@@ -4,6 +4,8 @@ Linux::Inotify2 - scalable directory/file change notification
 
 =head1 SYNOPSIS
 
+=head2 Callback interface
+
  use Linux::Inotify2;
 
  # create a new object
@@ -26,9 +28,30 @@ Linux::Inotify2 - scalable directory/file change notification
     print "$name is gone\n" if $e->IN_IGNORED;
     print "events for $name have been lost\n" if $e->IN_Q_OVERFLOW;
  
-    # cancel this watcheR: remove no further events
+    # cancel this watcher: remove no further events
     $e->w->cancel;
  });
+
+=head2 Streaming Interface
+
+ use Linux::Inotify2 ;
+
+ # create a new object
+ my $inotify = new Linux::Inotify2
+    or die "Unable to create new inotify object: $!" ;
+
+ # create watch
+ $inotify->watch ("/etc/passwd", IN_ACCESS)
+    or die "watch creation failed" ;
+
+ while () {
+   my @events = $inotify->read;
+   unless (@events > 0) {
+     print "read error: $!";
+     last ;
+   }
+   printf "mask\t%d\n", $_->mask foreach @events ; 
+ }
 
 =head1 DESCRIPTION
 
@@ -52,12 +75,13 @@ It has a number of advantages over the Linux::Inotify module:
 package Linux::Inotify2;
 
 use Carp ();
+use Fcntl ();
 use Scalar::Util ();
 
 use base 'Exporter';
 
 BEGIN {
-   $VERSION = 0.8;
+   $VERSION = '1.0';
 
    @constants = qw(
       IN_ACCESS IN_MODIFY IN_ATTRIB IN_CLOSE_WRITE
@@ -105,7 +129,7 @@ sub new {
    bless { fd => $fd }, $class
 }
 
-=item $watch = $inotify->watch ($name, $mask, $cb)
+=item $watch = $inotify->watch ($name, $mask[, $cb])
 
 Add a new watcher to the given notifier. The watcher will create events
 on the pathname C<$name> as given in C<$mask>, which can be any of the
@@ -134,8 +158,8 @@ directory), that is files, directories, symlinks, device nodes etc., while
  IN_CLOSE             same as IN_CLOSE_WRITE | IN_CLOSE_NOWRITE
  IN_MOVE              same as IN_MOVED_FROM | IN_MOVED_TO
 
-C<$cb> is a perl code reference that is called for each event. It receives
-a C<Linux::Inotify2::Event> object.
+C<$cb> is a perl code reference that, if given, is called for each
+event. It receives a C<Linux::Inotify2::Event> object.
 
 The returned C<$watch> object is of class C<Linux::Inotify2::Watch>.
 
@@ -193,6 +217,18 @@ sub fileno {
    $_[0]{fd}
 }
 
+=item $inotify->blocking ($blocking)
+
+Clears ($blocking true) or sets ($blocking false) the C<O_NONBLOCK> flag on the file descriptor.
+
+=cut
+
+sub blocking {
+   my ($self, $blocking) = @_;
+
+   inotify_blocking $self->{fd}, $blocking;
+}
+
 =item $count = $inotify->poll
 
 Reads events from the kernel and handles them. If the notify fileno is
@@ -205,9 +241,22 @@ Returns the count of events that have been handled.
 =cut
 
 sub poll {
+   scalar &read
+}
+
+=item $count = $inotify->read
+
+Reads events from the kernel. Blocks in blocking mode (default) until any
+event arrives. Returns list of C<Linux::Inotify2::Event> objects or empty
+list if none (non-blocking mode) or error occured ($! should be checked).
+
+=cut
+
+sub read {
    my ($self) = @_;
 
    my @ev = inotify_read $self->{fd};
+   my @res;
 
    for (@ev) {
       my $w = $_->{w} = $self->{w}{$_->{wd}}
@@ -216,13 +265,16 @@ sub poll {
       exists $self->{ignore}{$_->{wd}}
          and next; # watcher has been canceled
 
-      $w->{cb}->(bless $_, Linux::Inotify2::Event);
+      push @res, $_;
+
+      $w->{cb}->(bless $_, Linux::Inotify2::Event) if $w->{cb};
       $w->cancel if $_->{mask} & (IN_IGNORED | IN_UNMOUNT | IN_ONESHOT);
+
    }
 
    delete $self->{ignore};
 
-   scalar @ev
+   @res
 }
 
 sub DESTROY {

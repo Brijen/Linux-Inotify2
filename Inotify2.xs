@@ -5,6 +5,7 @@
 #include "XSUB.h"
 
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "inotify.h"
 #include "inotify-syscalls.h"
@@ -53,6 +54,11 @@ inotify_add_watch (int fd, char *name, U32 mask)
 int
 inotify_rm_watch (int fd, U32 wd)
 
+int
+inotify_blocking (int fd, I32 blocking)
+  	CODE:
+        fcntl (fd, F_SETFL, blocking ? 0 : O_NONBLOCK);
+
 void
 inotify_read (int fd, int size = 8192)
 	PPCODE:
@@ -61,7 +67,10 @@ inotify_read (int fd, int size = 8192)
         int got = read (fd, buf, size);
 
         if (got < 0)
-          croak ("Linux::Inotify2: read error while reading events");
+          if (errno != EAGAIN && errno != EINTR)
+            croak ("Linux::Inotify2: read error while reading events");
+          else
+            XSRETURN_EMPTY;
 
         cur = buf;
         end = buf + got;
@@ -80,7 +89,7 @@ inotify_read (int fd, int size = 8192)
             hv_store (hv, "cookie", sizeof ("cookie") - 1, newSViv (ev->cookie), 0);
             hv_store (hv, "name",   sizeof ("name")   - 1, newSVpvn (ev->name, ev->len), 0);
 
-            XPUSHs (newRV_noinc ((SV *)hv));
+            XPUSHs (sv_2mortal (newRV_noinc ((SV *)hv)));
           }
 }
 

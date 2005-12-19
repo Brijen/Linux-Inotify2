@@ -2,6 +2,7 @@ NAME
     Linux::Inotify2 - scalable directory/file change notification
 
 SYNOPSIS
+  Callback interface
      use Linux::Inotify2;
 
      # create a new object
@@ -24,9 +25,29 @@ SYNOPSIS
         print "$name is gone\n" if $e->IN_IGNORED;
         print "events for $name have been lost\n" if $e->IN_Q_OVERFLOW;
  
-        # cancel this watcheR: remove no further events
+        # cancel this watcher: remove no further events
         $e->w->cancel;
      });
+
+  Streaming Interface
+     use Linux::Inotify2 ;
+
+     # create a new object
+     my $inotify = new Linux::Inotify2
+        or die "Unable to create new inotify object: $!" ;
+
+     # create watch
+     $inotify->watch ("/etc/passwd", IN_ACCESS)
+        or die "watch creation failed" ;
+
+     while () {
+       my @events = $inotify->read;
+       unless (@events > 0) {
+         print "read error: $!";
+         last ;
+       }
+       printf "mask\t%d\n", $_->mask foreach @events ; 
+     }
 
 DESCRIPTION
     This module implements an interface to the Linux 2.6.13 and later
@@ -58,7 +79,7 @@ DESCRIPTION
            my $inotify = new Linux::Inotify2
               or die "Unable to create new inotify object: $!";
 
-    $watch = $inotify->watch ($name, $mask, $cb)
+    $watch = $inotify->watch ($name, $mask[, $cb])
         Add a new watcher to the given notifier. The watcher will create
         events on the pathname $name as given in $mask, which can be any of
         the following constants (all exported by default) ORed together.
@@ -87,8 +108,8 @@ DESCRIPTION
          IN_CLOSE             same as IN_CLOSE_WRITE | IN_CLOSE_NOWRITE
          IN_MOVE              same as IN_MOVED_FROM | IN_MOVED_TO
 
-        $cb is a perl code reference that is called for each event. It
-        receives a "Linux::Inotify2::Event" object.
+        $cb is a perl code reference that, if given, is called for each
+        event. It receives a "Linux::Inotify2::Event" object.
 
         The returned $watch object is of class "Linux::Inotify2::Watch".
 
@@ -118,6 +139,10 @@ DESCRIPTION
         calling the "poll" method when this fileno becomes ready for
         reading.
 
+    $inotify->blocking ($blocking)
+        Clears ($blocking true) or sets ($blocking false) the "O_NONBLOCK"
+        flag on the file descriptor.
+
     $count = $inotify->poll
         Reads events from the kernel and handles them. If the notify fileno
         is blocking (the default), then this method waits for at least one
@@ -125,6 +150,12 @@ DESCRIPTION
         returns immediately when no pending events could be read.
 
         Returns the count of events that have been handled.
+
+    $count = $inotify->read
+        Reads events from the kernel. Blocks in blocking mode (default)
+        until any event arrives. Returns list of "Linux::Inotify2::Event"
+        objects or empty list if none (non-blocking mode) or error occured
+        ($! should be checked).
 
   The Linux::Inotify2::Event Class
     Objects of this class are handed as first argument to the watch
