@@ -81,7 +81,7 @@ use Scalar::Util ();
 use base 'Exporter';
 
 BEGIN {
-   $VERSION = '1.0';
+   $VERSION = '1.01';
 
    @constants = qw(
       IN_ACCESS IN_MODIFY IN_ATTRIB IN_CLOSE_WRITE
@@ -199,7 +199,7 @@ sub watch {
       name    => $name,
       mask    => $mask,
       cb      => $cb,
-   }, Linux::Inotify2::Watch;
+   }, "Linux::Inotify2::Watch";
 
    Scalar::Util::weaken $w->{inotify};
 
@@ -265,11 +265,12 @@ sub read {
       exists $self->{ignore}{$_->{wd}}
          and next; # watcher has been canceled
 
+      bless $_, "Linux::Inotify2::Event";
+
       push @res, $_;
 
-      $w->{cb}->(bless $_, Linux::Inotify2::Event) if $w->{cb};
+      $w->{cb}->($_) if $w->{cb};
       $w->cancel if $_->{mask} & (IN_IGNORED | IN_UNMOUNT | IN_ONESHOT);
-
    }
 
    delete $self->{ignore};

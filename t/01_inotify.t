@@ -21,8 +21,6 @@ rmdir $$;
 
 {
   my @list = $in->poll;
-  use PApp::Util;
-  warn PApp::Util::dumpval \@list;
   ok (@list > 0, scalar @list . " events read");
 }
 

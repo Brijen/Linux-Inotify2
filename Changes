@@ -1,5 +1,10 @@
 Revision history for Linux::Inotify2
 
+1.01 Tue Dec 20 12:31:16 CET 2005
+	- more fixes by Andrejs Dubovskis:
+	- removed debugging code accidentally left in.
+        - streaming API didn't always return properly blessed objects.
+
 1.0  Mon Dec 19 17:48:01 CET 2005                                                                                                 
 	- incorporated a major patch by Andrejs Dubovskis:
         - added a non-callback interface to read events
