@@ -35,6 +35,9 @@ BOOT:
         newCONSTSUB (stash, "IN_IGNORED"      , newSViv (IN_IGNORED));
         newCONSTSUB (stash, "IN_CLOSE"        , newSViv (IN_CLOSE));
         newCONSTSUB (stash, "IN_MOVE"         , newSViv (IN_MOVE));
+        newCONSTSUB (stash, "IN_ONLYDIR"      , newSViv (IN_ONLYDIR));
+        newCONSTSUB (stash, "IN_DONT_FOLLOW"  , newSViv (IN_DONT_FOLLOW));
+        newCONSTSUB (stash, "IN_MASK_ADD"     , newSViv (IN_MASK_ADD));
         newCONSTSUB (stash, "IN_ISDIR"        , newSViv (IN_ISDIR));
         newCONSTSUB (stash, "IN_ONESHOT"      , newSViv (IN_ONESHOT));
         newCONSTSUB (stash, "IN_ALL_EVENTS"   , newSViv (IN_ALL_EVENTS));

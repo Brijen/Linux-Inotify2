@@ -81,7 +81,7 @@ use Scalar::Util ();
 use base 'Exporter';
 
 BEGIN {
-   $VERSION = '1.01';
+   $VERSION = '1.1';
 
    @constants = qw(
       IN_ACCESS IN_MODIFY IN_ATTRIB IN_CLOSE_WRITE
@@ -90,7 +90,7 @@ BEGIN {
       IN_ALL_EVENTS
       IN_UNMOUNT IN_Q_OVERFLOW IN_IGNORED
       IN_CLOSE IN_MOVE
-      IN_ISDIR IN_ONESHOT
+      IN_ISDIR IN_ONESHOT IN_MASK_ADD IN_DONT_FOLLOW IN_ONLYDIR
    );
 
    @EXPORT = @constants;
@@ -154,6 +154,9 @@ directory), that is files, directories, symlinks, device nodes etc., while
  IN_ALL_EVENTS        all of the above events
 
  IN_ONESHOT           only send event once
+ IN_ONLYDIR           only watch the path if it is a directory
+ IN_DONT_FOLLOW       don't follow a sym link
+ IN_MASK_ADD          not supported with the current version of this module
 
  IN_CLOSE             same as IN_CLOSE_WRITE | IN_CLOSE_NOWRITE
  IN_MOVE              same as IN_MOVED_FROM | IN_MOVED_TO
@@ -369,6 +372,8 @@ Watch objects are created by calling the C<watch> method of a notifier.
 
 It has the following members and methods:
 
+=over 4
+
 =item $watch->name
 
 =item $watch->{name}
@@ -393,6 +398,8 @@ The callback as specified in the C<watch> call. Can optionally be changed.
 
 Cancels/removes this watch. Future events, even if already queued queued,
 will not be handled and resources will be freed.
+
+=back
 
 =cut
 

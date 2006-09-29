@@ -1,5 +1,14 @@
 Revision history for Linux::Inotify2
 
+TODO: document move/renaming issues for fullname
+TODO: find_watchers($path), or maybe just ->watchers
+
+1.1  Fri Sep 29 16:40:14 CEST 2006
+	- fixed formatting.
+	- add IN_MASK_ADD, IN_DONT_FOLLOW, IN_ONLYDIR.
+        - updated inotify.h from inotify-utils for wider architecture support.
+        - no internal changes.
+
 1.01 Tue Dec 20 12:31:16 CET 2005
 	- more fixes by Andrejs Dubovskis:
 	- removed debugging code accidentally left in.

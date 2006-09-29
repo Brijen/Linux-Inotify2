@@ -104,6 +104,9 @@ DESCRIPTION
          IN_ALL_EVENTS        all of the above events
 
          IN_ONESHOT           only send event once
+         IN_ONLYDIR           only watch the path if it is a directory
+         IN_DONT_FOLLOW       don't follow a sym link
+         IN_MASK_ADD          not supported with the current version of this module
 
          IN_CLOSE             same as IN_CLOSE_WRITE | IN_CLOSE_NOWRITE
          IN_MOVE              same as IN_MOVED_FROM | IN_MOVED_TO
@@ -209,22 +212,22 @@ DESCRIPTION
 
     $watch->name
     $watch->{name}
-    The name as specified in the "watch" call. For the object itself, this
-    is the empty string. For directory watches, this is the name of the
-    entry without leading path elements.
+        The name as specified in the "watch" call. For the object itself,
+        this is the empty string. For directory watches, this is the name of
+        the entry without leading path elements.
 
     $watch->mask
     $watch->{mask}
-    The mask as specified in the "watch" call.
+        The mask as specified in the "watch" call.
 
     $watch->cb ([new callback])
     $watch->{cb}
-    The callback as specified in the "watch" call. Can optionally be
-    changed.
+        The callback as specified in the "watch" call. Can optionally be
+        changed.
 
     $watch->cancel
-    Cancels/removes this watch. Future events, even if already queued
-    queued, will not be handled and resources will be freed.
+        Cancels/removes this watch. Future events, even if already queued
+        queued, will not be handled and resources will be freed.
 
 SEE ALSO
     Linux::Inotify.
