@@ -2,21 +2,14 @@ NAME
     Linux::Inotify2 - scalable directory/file change notification
 
 SYNOPSIS
-  Callback interface
+  Callback Interface
      use Linux::Inotify2;
 
      # create a new object
      my $inotify = new Linux::Inotify2
-        or die "Unable to create new inotify object: $!";
- 
-     # for Event:
-     Event->io (fd =>$inotify->fileno, poll => 'r', cb => sub { $inotify->poll });
-     # for Glib:
-     add_watch Glib::IO $inotify->fileno, in => sub { $inotify->poll };
-     # manually:
-     1 while $inotify->poll;
-
-     # add watchers
+        or die "unable to create new inotify object: $!";
+     
+ # add watchers
      $inotify->watch ("/etc/passwd", IN_ACCESS, sub {
         my $e = shift;
         my $name = $e->fullname;
@@ -24,10 +17,18 @@ SYNOPSIS
         print "$name is no longer mounted\n" if $e->IN_UNMOUNT;
         print "$name is gone\n" if $e->IN_IGNORED;
         print "events for $name have been lost\n" if $e->IN_Q_OVERFLOW;
- 
-        # cancel this watcher: remove no further events
+     
+    # cancel this watcher: remove no further events
         $e->w->cancel;
      });
+
+     # integration into AnyEvent (works with POE, Glib, Tk...)
+     my $inotify_w = AnyEvent->io 
+        fh => $inofity, poll => 'r', cb => sub { $inotify->poll }
+     );
+
+     # manual event loop
+     1 while $inotify->poll;
 
   Streaming Interface
      use Linux::Inotify2 ;
@@ -230,7 +231,7 @@ DESCRIPTION
         queued, will not be handled and resources will be freed.
 
 SEE ALSO
-    Linux::Inotify.
+    AnyEvent, Linux::Inotify.
 
 AUTHOR
      Marc Lehmann <schmorp@schmorp.de>

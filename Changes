@@ -3,6 +3,13 @@ Revision history for Linux::Inotify2
 TODO: document move/renaming issues for fullname
 TODO: find_watchers($path), or maybe just ->watchers
 
+1.2  Tue Oct  7 19:23:57 CEST 2008
+	- include IN_DELETE_SELF in events that cancel watchers, as
+          the kernel seems to handle it this way only.
+        - require sys/inotify.h to be installed, remove the local
+          copy (patch by Adrian Bunk).
+        - update examples.
+
 1.1  Fri Sep 29 16:40:14 CEST 2006
 	- fixed formatting.
 	- add IN_MASK_ADD, IN_DONT_FOLLOW, IN_ONLYDIR.

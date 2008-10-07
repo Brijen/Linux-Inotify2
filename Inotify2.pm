@@ -4,21 +4,14 @@ Linux::Inotify2 - scalable directory/file change notification
 
 =head1 SYNOPSIS
 
-=head2 Callback interface
+=head2 Callback Interface
 
  use Linux::Inotify2;
 
  # create a new object
  my $inotify = new Linux::Inotify2
-    or die "Unable to create new inotify object: $!";
+    or die "unable to create new inotify object: $!";
  
- # for Event:
- Event->io (fd =>$inotify->fileno, poll => 'r', cb => sub { $inotify->poll });
- # for Glib:
- add_watch Glib::IO $inotify->fileno, in => sub { $inotify->poll };
- # manually:
- 1 while $inotify->poll;
-
  # add watchers
  $inotify->watch ("/etc/passwd", IN_ACCESS, sub {
     my $e = shift;
@@ -31,6 +24,14 @@ Linux::Inotify2 - scalable directory/file change notification
     # cancel this watcher: remove no further events
     $e->w->cancel;
  });
+
+ # integration into AnyEvent (works with POE, Glib, Tk...)
+ my $inotify_w = AnyEvent->io 
+    fh => $inofity, poll => 'r', cb => sub { $inotify->poll }
+ );
+
+ # manual event loop
+ 1 while $inotify->poll;
 
 =head2 Streaming Interface
 
@@ -81,7 +82,7 @@ use Scalar::Util ();
 use base 'Exporter';
 
 BEGIN {
-   $VERSION = '1.1';
+   $VERSION = '1.2';
 
    @constants = qw(
       IN_ACCESS IN_MODIFY IN_ATTRIB IN_CLOSE_WRITE
@@ -273,7 +274,7 @@ sub read {
       push @res, $_;
 
       $w->{cb}->($_) if $w->{cb};
-      $w->cancel if $_->{mask} & (IN_IGNORED | IN_UNMOUNT | IN_ONESHOT);
+      $w->cancel if $_->{mask} & (IN_IGNORED | IN_UNMOUNT | IN_ONESHOT | IN_DELETE_SELF);
    }
 
    delete $self->{ignore};
@@ -428,7 +429,7 @@ sub cancel {
 
 =head1 SEE ALSO
 
-L<Linux::Inotify>.
+L<AnyEvent>, L<Linux::Inotify>.
 
 =head1 AUTHOR
 

@@ -5,9 +5,6 @@ Changes
 Makefile.PL
 Inotify2.pm
 Inotify2.xs
-inotify.h
-inotify-masks.h
-inotify-syscalls.h
 eg/simple
 eg/event
 t/00_load.t

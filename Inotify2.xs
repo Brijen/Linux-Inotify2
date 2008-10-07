@@ -7,8 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "inotify.h"
-#include "inotify-syscalls.h"
+#include <sys/inotify.h>
 
 MODULE = Linux::Inotify2                PACKAGE = Linux::Inotify2
 
