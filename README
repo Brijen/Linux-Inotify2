@@ -8,8 +8,8 @@ SYNOPSIS
      # create a new object
      my $inotify = new Linux::Inotify2
         or die "unable to create new inotify object: $!";
-     
- # add watchers
+ 
+     # add watchers
      $inotify->watch ("/etc/passwd", IN_ACCESS, sub {
         my $e = shift;
         my $name = $e->fullname;
@@ -17,14 +17,14 @@ SYNOPSIS
         print "$name is no longer mounted\n" if $e->IN_UNMOUNT;
         print "$name is gone\n" if $e->IN_IGNORED;
         print "events for $name have been lost\n" if $e->IN_Q_OVERFLOW;
-     
-    # cancel this watcher: remove no further events
+ 
+        # cancel this watcher: remove no further events
         $e->w->cancel;
      });
 
-     # integration into AnyEvent (works with POE, Glib, Tk...)
-     my $inotify_w = AnyEvent->io 
-        fh => $inofity, poll => 'r', cb => sub { $inotify->poll }
+     # integration into AnyEvent (works with EV, Glib, Tk, POE...)
+     my $inotify_w = AnyEvent->io (
+        fh => $inofity->fileno, poll => 'r', cb => sub { $inotify->poll }
      );
 
      # manual event loop

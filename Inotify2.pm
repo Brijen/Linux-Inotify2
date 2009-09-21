@@ -25,9 +25,9 @@ Linux::Inotify2 - scalable directory/file change notification
     $e->w->cancel;
  });
 
- # integration into AnyEvent (works with POE, Glib, Tk...)
- my $inotify_w = AnyEvent->io 
-    fh => $inofity, poll => 'r', cb => sub { $inotify->poll }
+ # integration into AnyEvent (works with EV, Glib, Tk, POE...)
+ my $inotify_w = AnyEvent->io (
+    fh => $inofity->fileno, poll => 'r', cb => sub { $inotify->poll }
  );
 
  # manual event loop
@@ -79,12 +79,13 @@ use Carp ();
 use Fcntl ();
 use Scalar::Util ();
 
+use common::sense;
+
 use base 'Exporter';
 
 BEGIN {
-   $VERSION = '1.2';
-
-   @constants = qw(
+   our $VERSION = '1.21';
+   our @EXPORT = qw(
       IN_ACCESS IN_MODIFY IN_ATTRIB IN_CLOSE_WRITE
       IN_CLOSE_NOWRITE IN_OPEN IN_MOVED_FROM IN_MOVED_TO
       IN_CREATE IN_DELETE IN_DELETE_SELF IN_MOVE_SELF
@@ -93,8 +94,6 @@ BEGIN {
       IN_CLOSE IN_MOVE
       IN_ISDIR IN_ONESHOT IN_MASK_ADD IN_DONT_FOLLOW IN_ONLYDIR
    );
-
-   @EXPORT = @constants;
 
    require XSLoader;
    XSLoader::load Linux::Inotify2, $VERSION;
@@ -361,7 +360,7 @@ sub fullname {
       : $_[0]{w}{name};
 }
 
-for my $name (@Linux::Inotify2::constants) {
+for my $name (@Linux::Inotify2::EXPORT) {
    my $mask = &{"Linux::Inotify2::$name"};
 
    *$name = sub { ($_[0]{mask} & $mask) == $mask };

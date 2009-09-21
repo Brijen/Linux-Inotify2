@@ -8,6 +8,9 @@ my $mm = MM->new({
 	            },
     NAME         => "Linux::Inotify2",
     VERSION_FROM => "Inotify2.pm",
+    PREREQ_PM    => {
+       common::sense => 0,
+    },
 });
 
 $mm->flush;
